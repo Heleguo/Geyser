@@ -74,6 +74,7 @@ import org.geysermc.geyser.configuration.GeyserConfiguration;
 import org.geysermc.geyser.entity.EntityDefinitions;
 import org.geysermc.geyser.erosion.UnixSocketClientListener;
 import org.geysermc.geyser.event.GeyserEventBus;
+import org.geysermc.geyser.event.type.SessionDisconnectEventImpl;
 import org.geysermc.geyser.extension.GeyserExtensionManager;
 import org.geysermc.geyser.impl.MinecraftVersionImpl;
 import org.geysermc.geyser.level.BedrockDimension;
@@ -86,6 +87,7 @@ import org.geysermc.geyser.registry.provider.ProviderSupplier;
 import org.geysermc.geyser.scoreboard.ScoreboardUpdater;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.PendingMicrosoftAuthentication;
+import org.geysermc.geyser.session.SessionDisconnectListener;
 import org.geysermc.geyser.session.SessionManager;
 import org.geysermc.geyser.session.cache.RegistryCache;
 import org.geysermc.geyser.skin.FloodgateSkinUploader;
@@ -101,7 +103,6 @@ import org.geysermc.geyser.util.MinecraftAuthLogger;
 import org.geysermc.geyser.util.NewsHandler;
 import org.geysermc.geyser.util.VersionCheckUtils;
 import org.geysermc.geyser.util.WebUtils;
-import org.geysermc.mcprotocollib.network.tcp.TcpSession;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -266,6 +267,8 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
 
         // Register our general permissions when possible
         eventBus.subscribe(this, GeyserRegisterPermissionsEvent.class, Permissions::register);
+        // Replace disconnect messages whenever necessary
+        eventBus.subscribe(this, SessionDisconnectEventImpl.class, SessionDisconnectListener::onSessionDisconnect);
 
         startInstance();
 
@@ -413,9 +416,6 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
                 logger.debug("Found SRV record \"" + remoteAddress + ":" + remotePort + "\"");
             }
         }
-
-        // Ensure that PacketLib does not create an event loop for handling packets; we'll do that ourselves
-        TcpSession.USE_EVENT_LOOP_FOR_PACKETS = false;
 
         pendingMicrosoftAuthentication = new PendingMicrosoftAuthentication(config.getPendingAuthenticationTimeout());
 
